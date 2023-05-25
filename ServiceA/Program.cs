@@ -1,3 +1,7 @@
+using System.Reflection;
+using GreenPipes;
+using MassTransit;
+using MassTransit.Definition;
 using Polly;
 using Polly.Timeout;
 using ServiceA.Clients;
@@ -50,6 +54,18 @@ public class Program
                     ))
                     .AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(1));
 
+
+        builder.Services.AddMassTransit(configure =>
+        {
+            configure.UsingRabbitMq((context, configurator) =>
+            {
+                configurator.Host("localhost");
+                configurator.ConfigureEndpoints(context, new KebabCaseEndpointNameFormatter("serviceA", false));
+                configurator.UseMessageRetry((retryConfigurator) => retryConfigurator.Interval(3, TimeSpan.FromSeconds(5)));
+            });
+        });
+
+        builder.Services.AddMassTransitHostedService();
 
         var app = builder.Build();
 
